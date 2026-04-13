@@ -73,7 +73,20 @@ export class Star {
   }
 }
 
-export type CollisionEffectType = 'sparks' | 'explosion' | 'transfer' | 'burst' | 'fragment' | 'shockwave' | 'excitation' | 'emission' | 'absorption' | 'tunneling' | 'entanglement' | 'decoherence' | 'transition';
+export type CollisionEffectType = 'sparks' | 'explosion' | 'transfer' | 'burst' | 'fragment' | 'shockwave' | 'excitation' | 'emission' | 'absorption' | 'tunneling' | 'entanglement' | 'decoherence' | 'transition' | 'interference';
+
+export interface CollisionResult {
+  id: string;
+  timestamp: number;
+  typeA: ParticleType;
+  typeB?: ParticleType;
+  outcome: string;
+  energyChange: number;
+  stability: number; // 0 to 1
+  newParticles: number;
+  events: CollisionEffectType[];
+  description: string;
+}
 
 export class CollisionEffect {
   x: number;
@@ -104,12 +117,18 @@ export class CollisionEffect {
       case 'emission': this.maxLife = 30; break;
       case 'absorption': this.maxLife = 30; break;
       case 'tunneling': this.maxLife = 20; break;
-      case 'entanglement': this.maxLife = 50; break;
-      case 'decoherence': this.maxLife = 35; break;
-      case 'transition': this.maxLife = 45; break;
-      default: this.maxLife = 20;
+      case 'entanglement': this.maxLife = 80; break;
+      case 'decoherence': this.maxLife = 55; break;
+      case 'transition': this.maxLife = 60; break;
+      case 'interference': this.maxLife = 70; break;
+      default: this.maxLife = 30;
     }
     
+    this.initParticles(densityMult);
+  }
+
+  initParticles(densityMult: number) {
+    const type = this.type;
     if (type === 'sparks') {
       const count = Math.floor(18 * densityMult);
       for (let i = 0; i < count; i++) {
@@ -149,6 +168,33 @@ export class CollisionEffect {
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
           size: 1.5 + Math.random() * 4,
+          alpha: 1.0
+        });
+      }
+    } else if (type === 'entanglement') {
+      const count = 5;
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+        this.particles.push({
+          x: Math.cos(angle) * 20,
+          y: Math.sin(angle) * 20,
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: (Math.random() - 0.5) * 0.5,
+          size: 2,
+          alpha: 1.0
+        });
+      }
+    } else if (type === 'interference') {
+      const count = Math.floor(10 * densityMult);
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1 + Math.random() * 2;
+        this.particles.push({
+          x: 0,
+          y: 0,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          size: 1,
           alpha: 1.0
         });
       }
@@ -448,29 +494,78 @@ export class CollisionEffect {
       });
     } else if (this.type === 'excitation') {
       ctx.strokeStyle = this.color;
+      ctx.shadowBlur = 15 * this.life;
+      ctx.shadowColor = this.color;
       this.particles.forEach((p, i) => {
         ctx.globalAlpha = this.life * (1 - i / 5);
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.arc(0, 0, p.size * (1 + (1 - this.life) * 2), 0, Math.PI * 2);
+        ctx.arc(0, 0, p.size * (1 + (1 - this.life) * 4), 0, Math.PI * 2);
         ctx.stroke();
       });
+      ctx.shadowBlur = 0;
     } else if (this.type === 'emission') {
       ctx.fillStyle = this.color;
+      ctx.shadowBlur = 10 * this.life;
+      ctx.shadowColor = this.color;
       this.particles.forEach(p => {
         ctx.globalAlpha = p.alpha;
         ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, p.size * 1.5, 0, Math.PI * 2);
         ctx.fill();
         
         // Glow trail
         ctx.strokeStyle = this.color;
-        ctx.globalAlpha = p.alpha * 0.5;
+        ctx.globalAlpha = p.alpha * 0.6;
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(p.x, p.y);
-        ctx.lineTo(p.x - p.vx * 3, p.y - p.vy * 3);
+        ctx.lineTo(p.x - p.vx * 5, p.y - p.vy * 5);
         ctx.stroke();
       });
+      ctx.shadowBlur = 0;
+    } else if (this.type === 'entanglement') {
+      ctx.strokeStyle = this.color;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([2, 4]);
+      const shimmer = Math.sin(Date.now() * 0.01) * 0.5 + 0.5;
+      ctx.globalAlpha = this.life * shimmer;
+      
+      this.particles.forEach((p, i) => {
+        const next = this.particles[(i + 1) % this.particles.length];
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(next.x, next.y);
+        ctx.stroke();
+        
+        // Shimmering points
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.setLineDash([]);
+    } else if (this.type === 'interference') {
+      ctx.strokeStyle = this.color;
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 5; i++) {
+        ctx.globalAlpha = this.life * (0.5 - i * 0.1);
+        ctx.beginPath();
+        const r = 20 + i * 15 + (1 - this.life) * 100;
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Interference fringes
+        ctx.save();
+        ctx.rotate(Date.now() * 0.001);
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a) * (r - 5), Math.sin(a) * (r - 5));
+          ctx.lineTo(Math.cos(a) * (r + 5), Math.sin(a) * (r + 5));
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
     } else if (this.type === 'absorption') {
       ctx.fillStyle = this.color;
       this.particles.forEach(p => {
@@ -850,6 +945,14 @@ export class Particle {
             collisionEffects.push(new CollisionEffect(this.x, this.y, 'transfer', '#00ffff', config.highDefinition));
           }
         }
+
+        // Excitation / Emission
+        if (this.energy > 0.92 && Math.random() < 0.02) {
+          if (collisionEffects) {
+            collisionEffects.push(new CollisionEffect(this.x, this.y, 'emission', this.color, config.highDefinition));
+          }
+          this.energy *= 0.6; // Lose energy on emission
+        }
       }
 
       // Entanglement effects
@@ -1006,6 +1109,19 @@ export class Particle {
     const twinkle = Math.sin(this.pulse) * 0.3 + 0.7;
     const glowIntensity = config.glowLevel * this.energy * twinkle;
     
+    // Excitation Glow
+    if (this.energy > 0.85) {
+      ctx.save();
+      ctx.shadowBlur = 25 * this.energy;
+      ctx.shadowColor = this.color;
+      ctx.globalAlpha = Math.min(1, (this.energy - 0.85) * 4);
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size * 1.8, 0, Math.PI * 2);
+      ctx.fillStyle = this.color;
+      ctx.fill();
+      ctx.restore();
+    }
+
     // Quantum Visualization
     if (modes.includes('quantum')) {
       const { isQuantumEnergyView, showProbabilityCloud, isWaveMode } = quantumSettings;

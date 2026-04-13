@@ -7,7 +7,7 @@ import {
   Sparkles, Atom, Database, Activity, Globe,
   Flame, Waves, Sun, Magnet, Cpu, ZoomIn, ZoomOut, Search, Move
 } from 'lucide-react';
-import { Particle, Player, Force, ForceType, SimulationMode, ParticleType, Star, CollisionEffect, CollisionEffectType } from './types';
+import { Particle, Player, Force, ForceType, SimulationMode, ParticleType, Star, CollisionEffect, CollisionEffectType, CollisionResult } from './types';
 import QuantumWorld from './components/quantum/QuantumWorld';
 
 const MODES: { id: SimulationMode; label: string; icon: any; desc: string }[] = [
@@ -92,6 +92,10 @@ export default function App() {
   const [isTopMenuOpen, setIsTopMenuOpen] = useState(true);
   const [isQuantumWorld, setIsQuantumWorld] = useState(false);
   
+  // Collision Lab State
+  const [collisionHistory, setCollisionHistory] = useState<CollisionResult[]>([]);
+  const [activeCollisionResult, setActiveCollisionResult] = useState<CollisionResult | null>(null);
+
   // Quantum Settings
   const [quantumSettings, setQuantumSettings] = useState({
     isQuantumEnergyView: false,
@@ -250,6 +254,88 @@ export default function App() {
     particlesRef.current = Array.from({ length: config.particleCount }, () => new Particle(canvas.width, canvas.height));
     starsRef.current = Array.from({ length: 100 }, () => new Star(canvas.width, canvas.height));
   }, [config.particleCount]);
+
+  const handleStartCollision = useCallback((types: ParticleType | ParticleType[], typeB?: ParticleType, setup?: any) => {
+    // 1. Clear existing particles for a clean lab experiment
+    particlesRef.current = [];
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const isMulti = Array.isArray(types);
+    const particleTypes = isMulti ? types : [types, typeB].filter(Boolean) as ParticleType[];
+
+    // 2. Spawn test particles
+    particleTypes.forEach((type, i) => {
+      const p = new Particle(canvas.width, canvas.height);
+      p.type = type;
+      
+      if (isMulti) {
+        // Spread around circle for multi-collision
+        const angle = (i / particleTypes.length) * Math.PI * 2;
+        const dist = 200;
+        p.x = centerX + Math.cos(angle) * dist;
+        p.y = centerY + Math.sin(angle) * dist;
+        p.vx = -Math.cos(angle) * 10;
+        p.vy = -Math.sin(angle) * 10;
+      } else {
+        // Linear 1-vs-1
+        p.x = centerX + (i === 0 ? -150 : 150);
+        p.y = centerY;
+        p.vx = i === 0 ? 8 : -8;
+        p.vy = 0;
+      }
+      
+      if (setup) p.quantumState = { ...p.quantumState, ...setup };
+      particlesRef.current.push(p);
+    });
+    
+    // 3. Trigger visual effect
+    collisionEffectsRef.current.push(new CollisionEffect(centerX, centerY, 'interference', '#00ffff', config.highDefinition));
+    
+    // 4. Generate a result after a small delay (simulating collision)
+    setTimeout(() => {
+      const outcomes = [
+        "Quantum Entanglement", "Particle Fusion", "Energy Annihilation", 
+        "State Superposition", "Decoherence Event", "Tunneling Success",
+        "Plasma Excitation", "Dark Matter Interaction", "Quark Gluon Plasma",
+        "Higgs Field Perturbation", "String Theory Resonance", "Vacuum Decay (Local)"
+      ];
+      const outcome = outcomes[Math.floor(Math.random() * outcomes.length)];
+      const energyChange = (Math.random() - 0.3) * 100;
+      const stability = Math.random() * 0.9 + 0.1;
+      
+      const result: CollisionResult = {
+        id: Math.random().toString(36).substr(2, 9),
+        timestamp: Date.now(),
+        typeA: particleTypes[0],
+        typeB: particleTypes[1],
+        outcome,
+        energyChange,
+        stability,
+        newParticles: Math.floor(Math.random() * 15),
+        events: ['excitation', 'emission', 'entanglement', 'interference', 'transition', 'tunneling', 'decoherence'].sort(() => 0.5 - Math.random()).slice(0, 4) as CollisionEffectType[],
+        description: `The ${isMulti ? 'multi-particle' : '1-vs-1'} collision involving ${particleTypes.join(', ')} resulted in a ${outcome.toLowerCase()}. ${energyChange > 50 ? 'Extreme' : 'Significant'} energy flux detected at the Planck scale with a stability factor of ${stability.toFixed(2)}.`
+      };
+      
+      setActiveCollisionResult(result);
+      setCollisionHistory(prev => [result, ...prev].slice(0, 20));
+      
+      // Trigger final effects
+      collisionEffectsRef.current.push(new CollisionEffect(centerX, centerY, 'transition', '#ffffff', config.highDefinition));
+      collisionEffectsRef.current.push(new CollisionEffect(centerX, centerY, 'shockwave', '#00ffff', config.highDefinition));
+      shakeRef.current = 15;
+    }, 1200);
+  }, [config.highDefinition]);
+
+  const resetLab = useCallback(() => {
+    particlesRef.current = [];
+    collisionEffectsRef.current = [];
+    setActiveCollisionResult(null);
+    initParticles();
+  }, [initParticles]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -2080,6 +2166,11 @@ export default function App() {
         setQuantumSettings={setQuantumSettings}
         onMeasure={handleMeasure}
         onCollapse={handleCollapse}
+        collisionHistory={collisionHistory}
+        activeCollisionResult={activeCollisionResult}
+        setActiveCollisionResult={setActiveCollisionResult}
+        onStartCollision={handleStartCollision}
+        onResetLab={resetLab}
       />
 
       {/* Interaction Hints (First touch) */}

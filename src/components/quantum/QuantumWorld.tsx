@@ -2,9 +2,13 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, Activity, Zap, Eye, EyeOff, Layers, 
-  Waves, Atom, Share2, Info, Maximize2, Minimize2
+  Waves, Atom, Share2, Info, Maximize2, Minimize2,
+  Beaker, FlaskConical, History
 } from 'lucide-react';
 import QuantumUI from './QuantumUI';
+import CollisionLab from './CollisionLab';
+import CollisionResultPanel from './CollisionResult';
+import { CollisionResult, ParticleType } from '../../types';
 
 interface QuantumWorldProps {
   isOpen: boolean;
@@ -19,6 +23,11 @@ interface QuantumWorldProps {
   setQuantumSettings: React.Dispatch<React.SetStateAction<any>>;
   onMeasure: () => void;
   onCollapse: () => void;
+  collisionHistory: CollisionResult[];
+  activeCollisionResult: CollisionResult | null;
+  setActiveCollisionResult: (result: CollisionResult | null) => void;
+  onStartCollision: (typeA: ParticleType, typeB?: ParticleType, setup?: any) => void;
+  onResetLab: () => void;
 }
 
 export default function QuantumWorld({ 
@@ -27,8 +36,15 @@ export default function QuantumWorld({
   quantumSettings, 
   setQuantumSettings,
   onMeasure,
-  onCollapse
+  onCollapse,
+  collisionHistory,
+  activeCollisionResult,
+  setActiveCollisionResult,
+  onStartCollision,
+  onResetLab
 }: QuantumWorldProps) {
+  const [activeTab, setActiveTab] = React.useState<'simulation' | 'lab'>('simulation');
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -74,18 +90,77 @@ export default function QuantumWorld({
             </button>
           </div>
 
-          {/* Main Content Area (Empty for canvas to show through) */}
-          <div className="flex-1 relative" />
-
-          {/* Quantum Controls Panel */}
-          <div className="relative z-10 p-4 pb-8 pointer-events-auto">
-            <QuantumUI 
-              settings={quantumSettings} 
-              setSettings={setQuantumSettings}
-              onMeasure={onMeasure}
-              onCollapse={onCollapse}
-            />
+          {/* Tab Switcher */}
+          <div className="relative z-10 flex justify-center mt-2 pointer-events-auto">
+            <div className="flex bg-black/40 backdrop-blur-md rounded-full p-1 border border-white/10 shadow-xl">
+              <button 
+                onClick={() => setActiveTab('simulation')}
+                className={`flex items-center gap-2 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'simulation' ? 'bg-cyan-500 text-black shadow-[0_0_15px_rgba(6,182,212,0.4)]' : 'text-white/40 hover:text-white'}`}
+              >
+                <Activity size={14} />
+                Simulation
+              </button>
+              <button 
+                onClick={() => setActiveTab('lab')}
+                className={`flex items-center gap-2 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'lab' ? 'bg-purple-500 text-black shadow-[0_0_15px_rgba(168,85,247,0.4)]' : 'text-white/40 hover:text-white'}`}
+              >
+                <FlaskConical size={14} />
+                Collision Lab
+              </button>
+            </div>
           </div>
+
+          {/* Main Content Area */}
+          <div className="flex-1 relative flex flex-col p-6 overflow-hidden">
+            <AnimatePresence mode="wait">
+              {activeTab === 'lab' && (
+                <motion.div 
+                  key="lab"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="h-full pointer-events-auto"
+                >
+                  <CollisionLab 
+                    onStartCollision={onStartCollision}
+                    history={collisionHistory}
+                    onReset={onResetLab}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Collision Result Overlay */}
+            <AnimatePresence>
+              {activeCollisionResult && (
+                <div className="absolute inset-0 flex items-center justify-center z-50 p-6 pointer-events-none">
+                  <CollisionResultPanel 
+                    result={activeCollisionResult}
+                    onClose={() => setActiveCollisionResult(null)}
+                  />
+                </div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Quantum Controls Panel (Only in simulation mode) */}
+          <AnimatePresence>
+            {activeTab === 'simulation' && (
+              <motion.div 
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 50 }}
+                className="relative z-10 p-4 pb-8 pointer-events-auto"
+              >
+                <QuantumUI 
+                  settings={quantumSettings} 
+                  setSettings={setQuantumSettings}
+                  onMeasure={onMeasure}
+                  onCollapse={onCollapse}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Status Bar */}
           <div className="relative z-10 px-6 py-2 bg-black/40 backdrop-blur-md border-t border-white/5 flex justify-between items-center text-[8px] uppercase tracking-[0.2em] text-white/30">
