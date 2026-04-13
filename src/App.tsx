@@ -8,6 +8,7 @@ import {
   Flame, Waves, Sun, Magnet, Cpu, ZoomIn, ZoomOut, Search, Move
 } from 'lucide-react';
 import { Particle, Player, Force, ForceType, SimulationMode, ParticleType, Star, CollisionEffect, CollisionEffectType } from './types';
+import QuantumWorld from './components/quantum/QuantumWorld';
 
 const MODES: { id: SimulationMode; label: string; icon: any; desc: string }[] = [
   { id: 'static', label: 'พลังงานคงที่', icon: <Zap size={18} />, desc: 'สนามพลังงานที่เสถียรและสงบ' },
@@ -89,16 +90,19 @@ export default function App() {
   const [charge, setCharge] = useState(0);
   const [isBottomMenuOpen, setIsBottomMenuOpen] = useState(true);
   const [isTopMenuOpen, setIsTopMenuOpen] = useState(true);
+  const [isQuantumWorld, setIsQuantumWorld] = useState(false);
   
-  // Quantum States
-  const [isQuantumEnergyView, setIsQuantumEnergyView] = useState(false);
-  const [showProbabilityCloud, setShowProbabilityCloud] = useState(true);
-  const [showEntanglement, setShowEntanglement] = useState(true);
-  const [isWaveMode, setIsWaveMode] = useState(false);
-  const [measurementActive, setMeasurementActive] = useState(false);
+  // Quantum Settings
+  const [quantumSettings, setQuantumSettings] = useState({
+    isQuantumEnergyView: false,
+    showProbabilityCloud: true,
+    showEntanglement: true,
+    isWaveMode: false,
+    measurementActive: false,
+  });
 
   const chargeInterval = useRef<number | null>(null);
-  
+
   // Simulation Config
   const [config, setConfig] = useState({
     particleCount: isMobile ? 400 : 1000,
@@ -115,6 +119,38 @@ export default function App() {
     highDefinition: !isMobile
   });
 
+  const handleMeasure = useCallback(() => {
+    particlesRef.current.forEach(p => {
+      if (Math.random() < 0.8) {
+        p.quantumState.isCollapsed = true;
+        p.quantumState.coherence *= 0.5;
+      }
+    });
+    shakeRef.current = 5;
+    collisionEffectsRef.current.push(new CollisionEffect(window.innerWidth/2, window.innerHeight/2, 'burst', '#00ffff', config.highDefinition));
+  }, [config.highDefinition]);
+
+  const handleCollapse = useCallback(() => {
+    particlesRef.current.forEach(p => {
+      p.quantumState.isCollapsed = true;
+      p.quantumState.coherence = 0;
+      p.vx *= 0.2;
+      p.vy *= 0.2;
+    });
+    shakeRef.current = 15;
+    collisionEffectsRef.current.push(new CollisionEffect(window.innerWidth/2, window.innerHeight/2, 'shockwave', '#ffffff', config.highDefinition));
+  }, [config.highDefinition]);
+
+  const toggleQuantumWorld = () => {
+    const active = !isQuantumWorld;
+    setIsQuantumWorld(active);
+    if (active) {
+      if (!modes.includes('quantum')) {
+        setModes(prev => [...prev, 'quantum']);
+      }
+    }
+  };
+  
   const particlesRef = useRef<Particle[]>([]);
   const starsRef = useRef<Star[]>([]);
   const collisionEffectsRef = useRef<CollisionEffect[]>([]);
@@ -246,7 +282,11 @@ export default function App() {
     const render = () => {
       if (!isPaused) {
         // Trail effect
-        ctx.fillStyle = `rgba(5, 5, 10, ${1 - config.trailLength})`;
+        if (isQuantumWorld) {
+          ctx.fillStyle = `rgba(2, 4, 8, ${1 - config.trailLength})`;
+        } else {
+          ctx.fillStyle = `rgba(5, 5, 10, ${1 - config.trailLength})`;
+        }
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         ctx.save();
@@ -755,15 +795,10 @@ export default function App() {
             }
           }
 
-          p.draw(ctx, config, modes, {
-            isQuantumEnergyView,
-            showProbabilityCloud,
-            showEntanglement,
-            isWaveMode
-          });
+          p.draw(ctx, config, modes, quantumSettings);
           
           // Draw Entanglement Lines
-          if (modes.includes('quantum') && showEntanglement && p.quantumState.entangledWith) {
+          if (modes.includes('quantum') && quantumSettings.showEntanglement && p.quantumState.entangledWith) {
             const other = particlesRef.current.find(op => op.id === p.quantumState.entangledWith);
             if (other) {
               ctx.save();
@@ -1505,6 +1540,18 @@ export default function App() {
           </AnimatePresence>
 
           <div className="flex gap-2 pointer-events-auto">
+            <button
+              onClick={toggleQuantumWorld}
+              className={`flex items-center gap-2 px-4 h-10 rounded-full border transition-all ${
+                isQuantumWorld 
+                  ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.3)]' 
+                  : 'bg-white/5 backdrop-blur-md border border-white/10 text-white/60 hover:bg-white/10'
+              }`}
+            >
+              <Atom size={18} className={isQuantumWorld ? 'animate-spin-slow' : ''} />
+              <span className="text-[10px] font-bold uppercase tracking-widest hidden sm:inline">Quantum World</span>
+            </button>
+
             <button 
               onClick={(e) => { e.stopPropagation(); setIsTopMenuOpen(!isTopMenuOpen); }}
               className={`w-10 h-10 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white transition-all duration-300 shadow-lg hover:bg-white/10`}
@@ -1799,39 +1846,39 @@ export default function App() {
                       <div className="flex justify-between items-center mb-1">
                         <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Quantum Systems</span>
                         <div className="flex gap-1">
-                          <div className={`w-1.5 h-1.5 rounded-full ${measurementActive ? 'bg-red-500 animate-pulse' : 'bg-cyan-500'}`} />
+                          <div className={`w-1.5 h-1.5 rounded-full ${quantumSettings.measurementActive ? 'bg-red-500 animate-pulse' : 'bg-cyan-500'}`} />
                         </div>
                       </div>
                       
                       <div className="grid grid-cols-3 gap-2">
                         <button 
-                          onClick={() => setIsQuantumEnergyView(!isQuantumEnergyView)}
-                          className={`py-2 rounded-lg border text-[9px] font-bold transition-all ${isQuantumEnergyView ? 'bg-cyan-500/40 border-cyan-400 text-white' : 'bg-black/40 border-white/10 text-white/40'}`}
+                          onClick={() => setQuantumSettings(prev => ({ ...prev, isQuantumEnergyView: !prev.isQuantumEnergyView }))}
+                          className={`py-2 rounded-lg border text-[9px] font-bold transition-all ${quantumSettings.isQuantumEnergyView ? 'bg-cyan-500/40 border-cyan-400 text-white' : 'bg-black/40 border-white/10 text-white/40'}`}
                         >
                           Energy View
                         </button>
                         <button 
-                          onClick={() => setShowProbabilityCloud(!showProbabilityCloud)}
-                          className={`py-2 rounded-lg border text-[9px] font-bold transition-all ${showProbabilityCloud ? 'bg-cyan-500/40 border-cyan-400 text-white' : 'bg-black/40 border-white/10 text-white/40'}`}
+                          onClick={() => setQuantumSettings(prev => ({ ...prev, showProbabilityCloud: !prev.showProbabilityCloud }))}
+                          className={`py-2 rounded-lg border text-[9px] font-bold transition-all ${quantumSettings.showProbabilityCloud ? 'bg-cyan-500/40 border-cyan-400 text-white' : 'bg-black/40 border-white/10 text-white/40'}`}
                         >
                           Prob Cloud
                         </button>
                         <button 
-                          onClick={() => setShowEntanglement(!showEntanglement)}
-                          className={`py-2 rounded-lg border text-[9px] font-bold transition-all ${showEntanglement ? 'bg-cyan-500/40 border-cyan-400 text-white' : 'bg-black/40 border-white/10 text-white/40'}`}
+                          onClick={() => setQuantumSettings(prev => ({ ...prev, showEntanglement: !prev.showEntanglement }))}
+                          className={`py-2 rounded-lg border text-[9px] font-bold transition-all ${quantumSettings.showEntanglement ? 'bg-cyan-500/40 border-cyan-400 text-white' : 'bg-black/40 border-white/10 text-white/40'}`}
                         >
                           Entangle
                         </button>
                         <button 
-                          onClick={() => setIsWaveMode(!isWaveMode)}
-                          className={`py-2 rounded-lg border text-[9px] font-bold transition-all ${isWaveMode ? 'bg-cyan-500/40 border-cyan-400 text-white' : 'bg-black/40 border-white/10 text-white/40'}`}
+                          onClick={() => setQuantumSettings(prev => ({ ...prev, isWaveMode: !prev.isWaveMode }))}
+                          className={`py-2 rounded-lg border text-[9px] font-bold transition-all ${quantumSettings.isWaveMode ? 'bg-cyan-500/40 border-cyan-400 text-white' : 'bg-black/40 border-white/10 text-white/40'}`}
                         >
                           Wave/Particle
                         </button>
                         <button 
                           onClick={() => {
-                            setMeasurementActive(true);
-                            setTimeout(() => setMeasurementActive(false), 500);
+                            setQuantumSettings(prev => ({ ...prev, measurementActive: true }));
+                            setTimeout(() => setQuantumSettings(prev => ({ ...prev, measurementActive: false })), 500);
                             particlesRef.current.forEach(p => {
                               if (Math.random() < 0.3) {
                                 p.quantumState.isCollapsed = true;
@@ -2024,6 +2071,16 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Quantum World Overlay */}
+      <QuantumWorld 
+        isOpen={isQuantumWorld}
+        onClose={() => setIsQuantumWorld(false)}
+        quantumSettings={quantumSettings}
+        setQuantumSettings={setQuantumSettings}
+        onMeasure={handleMeasure}
+        onCollapse={handleCollapse}
+      />
 
       {/* Interaction Hints (First touch) */}
       <div className="absolute bottom-32 left-1/2 -translate-x-1/2 pointer-events-none animate-pulse text-[10px] uppercase tracking-[0.3em] text-white/20 text-center">

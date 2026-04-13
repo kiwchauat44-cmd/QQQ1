@@ -722,6 +722,7 @@ export class Particle {
     
     if (modes.includes('static')) friction = 0.85;
     if (modes.includes('vortex')) friction = 0.99;
+    if (modes.includes('quantum')) friction = 0.995; // Less friction in quantum world
 
     this.vx *= friction;
     this.vy *= friction;
@@ -1011,12 +1012,57 @@ export class Particle {
 
       if (showProbabilityCloud && !this.quantumState.isCollapsed) {
         ctx.save();
-        ctx.globalAlpha = 0.1 * this.quantumState.probabilityCloud;
-        ctx.fillStyle = this.color;
+        const cloudAlpha = 0.15 * this.quantumState.probabilityCloud * this.quantumState.coherence;
+        ctx.globalAlpha = cloudAlpha;
+        
+        // Probability cloud with gradient
+        const cloudGrad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size * 8);
+        cloudGrad.addColorStop(0, this.color);
+        cloudGrad.addColorStop(1, 'transparent');
+        ctx.fillStyle = cloudGrad;
+        
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size * 5, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, this.size * 8, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
+      }
+
+      if (isWaveMode && !this.quantumState.isCollapsed) {
+        // Wave interference pattern visualization
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        const waveCount = 3;
+        for (let i = 0; i < waveCount; i++) {
+          const r = this.size * (3 + i * 4);
+          const alpha = (0.2 / (i + 1)) * this.quantumState.coherence;
+          ctx.strokeStyle = this.color;
+          ctx.globalAlpha = alpha;
+          ctx.lineWidth = 1;
+          
+          // Draw wave ring with interference "ripples"
+          ctx.beginPath();
+          for (let a = 0; a < Math.PI * 2; a += 0.1) {
+            const ripple = Math.sin(a * 8 + this.quantumState.phase + i) * 2;
+            const rx = this.x + Math.cos(a) * (r + ripple);
+            const ry = this.y + Math.sin(a) * (r + ripple);
+            if (a === 0) ctx.moveTo(rx, ry);
+            else ctx.lineTo(rx, ry);
+          }
+          ctx.closePath();
+          ctx.stroke();
+        }
+        ctx.restore();
+        
+        // If in wave mode, the "particle" itself is more ethereal
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        
+        return; // Skip standard drawing if in pure wave mode
       }
 
       if (isQuantumEnergyView) {
