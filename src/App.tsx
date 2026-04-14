@@ -922,20 +922,15 @@ export default function App() {
           // Unique visual styles based on ForceType
           switch (f.type) {
             case 'electric':
-              // Lightning lines
-              ctx.strokeStyle = color;
-              ctx.lineWidth = 1;
-              for (let i = 0; i < 8; i++) {
-                const angle = (i / 8) * Math.PI * 2 + Date.now() * 0.01;
+              // Subtle glow instead of lightning lines
+              if (Number.isFinite(radius) && radius > 0) {
+                const eGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, radius);
+                eGrad.addColorStop(0, color + '44');
+                eGrad.addColorStop(1, 'transparent');
+                ctx.fillStyle = eGrad;
                 ctx.beginPath();
-                ctx.moveTo(0, 0);
-                let lx = 0, ly = 0;
-                for (let j = 0; j < 5; j++) {
-                  lx += Math.cos(angle + (Math.random() - 0.5) * 0.5) * (radius / 5);
-                  ly += Math.sin(angle + (Math.random() - 0.5) * 0.5) * (radius / 5);
-                  ctx.lineTo(lx, ly);
-                }
-                ctx.stroke();
+                ctx.arc(0, 0, radius, 0, Math.PI * 2);
+                ctx.fill();
               }
               break;
             case 'nuclear':
