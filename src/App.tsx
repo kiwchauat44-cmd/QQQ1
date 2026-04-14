@@ -87,6 +87,7 @@ export default function App() {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [selectedBehavior, setSelectedBehavior] = useState<'static' | 'pulsate' | 'wander' | 'orbit'>('static');
   const [hoveredEnergy, setHoveredEnergy] = useState<ForceType | null>(null);
+  const [hoveredMode, setHoveredMode] = useState<SimulationMode | null>(null);
   const [charge, setCharge] = useState(0);
   const [isBottomMenuOpen, setIsBottomMenuOpen] = useState(true);
   const [isTopMenuOpen, setIsTopMenuOpen] = useState(true);
@@ -1627,7 +1628,7 @@ export default function App() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="absolute bottom-32 left-1/2 -translate-x-1/2 w-64 h-2 bg-black/40 backdrop-blur-md rounded-full border border-white/10 overflow-hidden z-50 pointer-events-none"
+            className="absolute bottom-32 left-1/2 -translate-x-1/2 w-64 h-2 bg-white/5 backdrop-blur-md rounded-full border border-white/10 overflow-hidden z-50 pointer-events-none"
           >
             <motion.div 
               className="h-full bg-gradient-to-r from-cyan-400 to-blue-600"
@@ -1656,7 +1657,7 @@ export default function App() {
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="bg-black/40 backdrop-blur-md p-3 rounded-2xl border border-white/10 shadow-2xl pointer-events-auto"
+                className="bg-white/5 backdrop-blur-md p-3 rounded-2xl border border-white/10 shadow-2xl pointer-events-auto"
               >
                 <h1 className="text-xl font-black italic cosmic-title glow-text leading-none">COSMIC FLOW</h1>
                 <p className="text-[8px] uppercase tracking-[0.4em] text-white/40 mt-1">ห้องทดลองพลังงานและสสาร</p>
@@ -1669,7 +1670,7 @@ export default function App() {
               onClick={toggleQuantumWorld}
               className={`flex items-center gap-2 px-4 h-10 rounded-full border transition-all ${
                 isQuantumWorld 
-                  ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.3)]' 
+                  ? 'bg-white/10 border-cyan-500/50 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.2)]' 
                   : 'bg-white/5 backdrop-blur-md border border-white/10 text-white/60 hover:bg-white/10'
               }`}
             >
@@ -1827,7 +1828,9 @@ export default function App() {
                           onClick={(e_obj) => { e_obj.stopPropagation(); toggleEnergy(e.id); }}
                           onMouseEnter={() => setHoveredEnergy(e.id)}
                           onMouseLeave={() => setHoveredEnergy(null)}
-                          className={`flex-shrink-0 snap-start flex flex-col items-center justify-center gap-1 p-2 min-w-[76px] min-h-[68px] rounded-2xl border transition-all duration-300 active:scale-90 pointer-events-auto relative overflow-hidden group ${
+                          onTouchStart={() => setHoveredEnergy(e.id)}
+                          onTouchEnd={() => setTimeout(() => setHoveredEnergy(null), 1500)}
+                          className={`flex-shrink-0 snap-start flex flex-col items-center justify-center gap-1 p-2 min-w-[76px] min-h-[68px] rounded-2xl border transition-all duration-300 active:scale-90 pointer-events-auto relative overflow-hidden group backdrop-blur-md ${
                             isActive 
                             ? 'bg-white/10 border-white/20 text-white shadow-[0_0_20px_rgba(255,255,255,0.05)]' 
                             : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'
@@ -1864,7 +1867,7 @@ export default function App() {
                         initial={{ opacity: 0, y: 5 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 5 }}
-                        className="mx-2 p-2 rounded-xl bg-black/40 backdrop-blur-md border border-white/10"
+                        className="mx-2 p-2 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl"
                       >
                         <div className="flex items-center gap-2 mb-1">
                           <div style={{ color: ENERGY_TYPES.find(e => e.id === hoveredEnergy)?.color }}>
@@ -1888,7 +1891,7 @@ export default function App() {
                     <button
                       key={p.name}
                       onClick={(e) => { e.stopPropagation(); applyPreset(p); }}
-                      className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-black/40 backdrop-blur-md border border-white/10 text-white/60 text-[9px] font-bold uppercase tracking-wider hover:bg-white/10 transition-all pointer-events-auto"
+                      className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-white/5 backdrop-blur-md border border-white/10 text-white/60 text-[9px] font-bold uppercase tracking-wider hover:bg-white/10 transition-all pointer-events-auto"
                     >
                       {p.name}
                     </button>
@@ -1896,54 +1899,84 @@ export default function App() {
                 </div>
 
                 {/* Mode Selector (Scrollable) */}
-                <div className="flex gap-2 overflow-x-auto pb-2 pointer-events-auto no-scrollbar snap-x">
-                  {MODES.map((m) => {
-                    const isActive = modes.includes(m.id);
-                    return (
-                      <button
-                        key={m.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setModes(prev => {
-                            const isSpecial = m.id === 'pan' || m.id === 'zoom';
-                            if (isSpecial) {
-                              const otherSpecial = m.id === 'pan' ? 'zoom' : 'pan';
-                              if (prev.includes(m.id)) {
-                                return prev.length > 1 ? prev.filter(id => id !== m.id) : prev;
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2 overflow-x-auto pb-2 pointer-events-auto no-scrollbar snap-x">
+                    {MODES.map((m) => {
+                      const isActive = modes.includes(m.id);
+                      return (
+                        <button
+                          key={m.id}
+                          onMouseEnter={() => setHoveredMode(m.id)}
+                          onMouseLeave={() => setHoveredMode(null)}
+                          onTouchStart={() => setHoveredMode(m.id)}
+                          onTouchEnd={() => setTimeout(() => setHoveredMode(null), 1500)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setModes(prev => {
+                              const isSpecial = m.id === 'pan' || m.id === 'zoom';
+                              if (isSpecial) {
+                                const otherSpecial = m.id === 'pan' ? 'zoom' : 'pan';
+                                if (prev.includes(m.id)) {
+                                  return prev.length > 1 ? prev.filter(id => id !== m.id) : prev;
+                                } else {
+                                  return [...prev.filter(id => id !== otherSpecial), m.id];
+                                }
                               } else {
-                                return [...prev.filter(id => id !== otherSpecial), m.id];
+                                if (prev.includes(m.id)) {
+                                  return prev.length > 1 ? prev.filter(id => id !== m.id) : prev;
+                                } else {
+                                  return [...prev, m.id];
+                                }
                               }
-                            } else {
-                              if (prev.includes(m.id)) {
-                                return prev.length > 1 ? prev.filter(id => id !== m.id) : prev;
-                              } else {
-                                return [...prev, m.id];
-                              }
-                            }
-                          });
-                        }}
-                        className={`flex-shrink-0 snap-start flex items-center gap-2 px-5 py-2.5 rounded-full border transition-all duration-300 active:scale-90 pointer-events-auto relative overflow-hidden group ${
-                          isActive 
-                          ? 'bg-white/10 border-white/20 text-white shadow-[0_0_25px_rgba(255,255,255,0.05)]' 
-                          : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'
-                        }`}
+                            });
+                          }}
+                          className={`flex-shrink-0 snap-start flex items-center gap-2 px-5 py-2.5 rounded-full border transition-all duration-300 active:scale-90 pointer-events-auto relative overflow-hidden group backdrop-blur-md ${
+                            isActive 
+                            ? 'bg-white/10 border-white/20 text-white shadow-[0_0_25px_rgba(255,255,255,0.05)]' 
+                            : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'
+                          }`}
+                        >
+                          {isActive && (
+                            <motion.div 
+                              layoutId="mode-active-pill"
+                              className="absolute inset-0 bg-white/10"
+                              transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                            />
+                          )}
+                          <span className="relative z-10">{m.icon}</span>
+                          <span className="text-[10px] font-black uppercase tracking-[0.15em] relative z-10">{m.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Mode Tooltip */}
+                  <AnimatePresence mode="wait">
+                    {hoveredMode && (
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.95, y: 5 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 5 }}
+                        className="mx-2 p-2 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl"
                       >
-                        {isActive && (
-                          <motion.div 
-                            layoutId="mode-active-pill"
-                            className="absolute inset-0 bg-white/10"
-                            transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
-                          />
-                        )}
-                        <span className="relative z-10">{m.icon}</span>
-                        <span className="text-[10px] font-black uppercase tracking-[0.15em] relative z-10">{m.label}</span>
-                      </button>
-                    );
-                  })}
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="text-cyan-400">
+                            {MODES.find(m => m.id === hoveredMode)?.icon}
+                          </div>
+                          <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                            {MODES.find(m => m.id === hoveredMode)?.label}
+                          </span>
+                        </div>
+                        <p className="text-[9px] text-white/50 leading-relaxed font-medium">
+                          {MODES.find(m => m.id === hoveredMode)?.desc}
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 {/* Stats Bar */}
-                <div className="flex justify-between items-center bg-black/40 backdrop-blur-md p-3 rounded-2xl border border-white/10">
+                <div className="flex justify-between items-center bg-white/5 backdrop-blur-md p-3 rounded-2xl border border-white/10 shadow-xl">
                   <div className="flex gap-4">
                     <div className="flex flex-col">
                       <span className="text-xs font-bold text-[#00ffcc]">{config.particleCount}</span>
@@ -1966,7 +1999,7 @@ export default function App() {
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="flex flex-col gap-2 bg-cyan-900/20 backdrop-blur-md p-3 rounded-2xl border border-cyan-500/30 overflow-hidden"
+                      className="flex flex-col gap-2 bg-white/5 backdrop-blur-md p-3 rounded-2xl border border-white/10 overflow-hidden shadow-xl"
                     >
                       <div className="flex justify-between items-center mb-1">
                         <span className="text-[10px] font-black text-cyan-400 uppercase tracking-widest">Quantum Systems</span>
@@ -1978,25 +2011,25 @@ export default function App() {
                       <div className="grid grid-cols-3 gap-2">
                         <button 
                           onClick={() => setQuantumSettings(prev => ({ ...prev, isQuantumEnergyView: !prev.isQuantumEnergyView }))}
-                          className={`py-2 rounded-lg border text-[9px] font-bold transition-all ${quantumSettings.isQuantumEnergyView ? 'bg-cyan-500/40 border-cyan-400 text-white' : 'bg-black/40 border-white/10 text-white/40'}`}
+                          className={`py-2 rounded-lg border text-[9px] font-bold transition-all backdrop-blur-md ${quantumSettings.isQuantumEnergyView ? 'bg-white/20 border-cyan-400 text-white shadow-[0_0_10px_rgba(34,211,238,0.2)]' : 'bg-white/5 border-white/10 text-white/40'}`}
                         >
                           Energy View
                         </button>
                         <button 
                           onClick={() => setQuantumSettings(prev => ({ ...prev, showProbabilityCloud: !prev.showProbabilityCloud }))}
-                          className={`py-2 rounded-lg border text-[9px] font-bold transition-all ${quantumSettings.showProbabilityCloud ? 'bg-cyan-500/40 border-cyan-400 text-white' : 'bg-black/40 border-white/10 text-white/40'}`}
+                          className={`py-2 rounded-lg border text-[9px] font-bold transition-all backdrop-blur-md ${quantumSettings.showProbabilityCloud ? 'bg-white/20 border-cyan-400 text-white shadow-[0_0_10px_rgba(34,211,238,0.2)]' : 'bg-white/5 border-white/10 text-white/40'}`}
                         >
                           Prob Cloud
                         </button>
                         <button 
                           onClick={() => setQuantumSettings(prev => ({ ...prev, showEntanglement: !prev.showEntanglement }))}
-                          className={`py-2 rounded-lg border text-[9px] font-bold transition-all ${quantumSettings.showEntanglement ? 'bg-cyan-500/40 border-cyan-400 text-white' : 'bg-black/40 border-white/10 text-white/40'}`}
+                          className={`py-2 rounded-lg border text-[9px] font-bold transition-all backdrop-blur-md ${quantumSettings.showEntanglement ? 'bg-white/20 border-cyan-400 text-white shadow-[0_0_10px_rgba(34,211,238,0.2)]' : 'bg-white/5 border-white/10 text-white/40'}`}
                         >
                           Entangle
                         </button>
                         <button 
                           onClick={() => setQuantumSettings(prev => ({ ...prev, isWaveMode: !prev.isWaveMode }))}
-                          className={`py-2 rounded-lg border text-[9px] font-bold transition-all ${quantumSettings.isWaveMode ? 'bg-cyan-500/40 border-cyan-400 text-white' : 'bg-black/40 border-white/10 text-white/40'}`}
+                          className={`py-2 rounded-lg border text-[9px] font-bold transition-all backdrop-blur-md ${quantumSettings.isWaveMode ? 'bg-white/20 border-cyan-400 text-white shadow-[0_0_10px_rgba(34,211,238,0.2)]' : 'bg-white/5 border-white/10 text-white/40'}`}
                         >
                           Wave/Particle
                         </button>
@@ -2012,7 +2045,7 @@ export default function App() {
                               }
                             });
                           }}
-                          className="py-2 rounded-lg border border-cyan-400 bg-cyan-500/20 text-white text-[9px] font-bold active:scale-95"
+                          className="py-2 rounded-lg border border-cyan-400/50 bg-white/10 backdrop-blur-md text-cyan-400 text-[9px] font-bold active:scale-95 hover:bg-white/20 transition-all"
                         >
                           Measure
                         </button>
@@ -2024,7 +2057,7 @@ export default function App() {
                               setTimeout(() => p.quantumState.isCollapsed = false, 1000);
                             });
                           }}
-                          className="py-2 rounded-lg border border-red-400 bg-red-500/20 text-white text-[9px] font-bold active:scale-95"
+                          className="py-2 rounded-lg border border-red-400/50 bg-white/10 backdrop-blur-md text-red-400 text-[9px] font-bold active:scale-95 hover:bg-white/20 transition-all"
                         >
                           Collapse
                         </button>
@@ -2045,7 +2078,7 @@ export default function App() {
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            className="absolute top-0 right-0 w-full max-w-[280px] h-full bg-black/80 backdrop-blur-2xl border-l border-white/10 p-6 pointer-events-auto flex flex-col gap-6 overflow-y-auto"
+            className="absolute top-0 right-0 w-full max-w-[280px] h-full bg-white/5 backdrop-blur-3xl border-l border-white/10 p-6 pointer-events-auto flex flex-col gap-6 overflow-y-auto shadow-2xl"
           >
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-bold uppercase tracking-widest text-white/80">การตั้งค่า</h2>
