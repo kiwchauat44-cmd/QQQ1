@@ -50,26 +50,45 @@ export interface Force {
 export class Star {
   x: number;
   y: number;
-  size: number;
+  baseSize: number;
   opacity: number;
   pulse: number;
   pulseSpeed: number;
+  twinkleOffset: number;
 
   constructor(width: number, height: number) {
     this.x = Math.random() * width;
     this.y = Math.random() * height;
-    this.size = Math.random() * 1.5;
-    this.opacity = Math.random() * 0.5 + 0.1;
+    this.baseSize = Math.random() * 1.5 + 0.5;
+    this.opacity = Math.random() * 0.5 + 0.2;
     this.pulse = Math.random() * Math.PI * 2;
-    this.pulseSpeed = 0.01 + Math.random() * 0.03;
+    this.pulseSpeed = 0.005 + Math.random() * 0.02;
+    this.twinkleOffset = Math.random() * 100;
   }
 
   draw(ctx: CanvasRenderingContext2D) {
     this.pulse += this.pulseSpeed;
-    const currentOpacity = this.opacity * (0.5 + Math.sin(this.pulse) * 0.5);
-    // Use a simpler rect for stars if they are very small, or keep arc but minimize calls
+    
+    // Twinkle effect: vary opacity and size subtly
+    const twinkle = Math.sin(this.pulse + this.twinkleOffset);
+    const currentOpacity = this.opacity * (0.6 + twinkle * 0.4);
+    const currentSize = this.baseSize * (0.8 + twinkle * 0.2);
+    
+    // Add a very subtle glow for larger stars
+    if (this.baseSize > 1.2) {
+      ctx.shadowBlur = 4 * (0.5 + twinkle * 0.5);
+      ctx.shadowColor = 'rgba(255, 255, 255, 0.5)';
+    } else {
+      ctx.shadowBlur = 0;
+    }
+
     ctx.fillStyle = `rgba(255, 255, 255, ${currentOpacity})`;
-    ctx.fillRect(this.x, this.y, this.size, this.size);
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, currentSize, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Reset shadow
+    ctx.shadowBlur = 0;
   }
 }
 

@@ -1774,16 +1774,16 @@ export default function App() {
                       <button
                         key={b.id}
                         onClick={(e) => { e.stopPropagation(); setSelectedBehavior(b.id); }}
-                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border transition-all active:scale-95 pointer-events-auto relative overflow-hidden ${
+                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border transition-all active:scale-95 pointer-events-auto relative overflow-hidden backdrop-blur-xl ${
                           selectedBehavior === b.id 
-                          ? 'bg-white/10 border-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.05)]' 
+                          ? 'bg-white/10 border-white/40 text-white shadow-[0_0_20px_rgba(255,255,255,0.1)]' 
                           : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'
                         }`}
                       >
                         {selectedBehavior === b.id && (
                           <motion.div 
                             layoutId="behavior-active-glow"
-                            className="absolute inset-0 bg-white/10"
+                            className="absolute inset-0 bg-white/5"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                           />
@@ -1830,16 +1830,16 @@ export default function App() {
                           onMouseLeave={() => setHoveredEnergy(null)}
                           onTouchStart={() => setHoveredEnergy(e.id)}
                           onTouchEnd={() => setTimeout(() => setHoveredEnergy(null), 1500)}
-                          className={`flex-shrink-0 snap-start flex flex-col items-center justify-center gap-1 p-2 min-w-[76px] min-h-[68px] rounded-2xl border transition-all duration-300 active:scale-90 pointer-events-auto relative overflow-hidden group backdrop-blur-md ${
+                          className={`flex-shrink-0 snap-start flex flex-col items-center justify-center gap-1 p-2 min-w-[76px] min-h-[68px] rounded-2xl border transition-all duration-300 active:scale-90 pointer-events-auto relative overflow-hidden group backdrop-blur-xl ${
                             isActive 
-                            ? 'bg-white/10 border-white/20 text-white shadow-[0_0_20px_rgba(255,255,255,0.05)]' 
+                            ? 'bg-white/10 border-white/40 text-white shadow-[0_0_25px_rgba(255,255,255,0.1)]' 
                             : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'
                           }`}
                         >
                           {isActive && (
                             <motion.div 
-                              layoutId="energy-active-bg"
-                              className="absolute inset-0 opacity-10"
+                              layoutId="energy-active-glow"
+                              className="absolute inset-0 opacity-20 blur-xl"
                               style={{ backgroundColor: e.color }}
                             />
                           )}
@@ -1930,16 +1930,16 @@ export default function App() {
                               }
                             });
                           }}
-                          className={`flex-shrink-0 snap-start flex items-center gap-2 px-5 py-2.5 rounded-full border transition-all duration-300 active:scale-90 pointer-events-auto relative overflow-hidden group backdrop-blur-md ${
+                          className={`flex-shrink-0 snap-start flex items-center gap-2 px-5 py-2.5 rounded-full border transition-all duration-300 active:scale-90 pointer-events-auto relative overflow-hidden group backdrop-blur-xl ${
                             isActive 
-                            ? 'bg-white/10 border-white/20 text-white shadow-[0_0_25px_rgba(255,255,255,0.05)]' 
+                            ? 'bg-white/10 border-white/40 text-white shadow-[0_0_30px_rgba(255,255,255,0.1)]' 
                             : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'
                           }`}
                         >
                           {isActive && (
                             <motion.div 
                               layoutId="mode-active-pill"
-                              className="absolute inset-0 bg-white/10"
+                              className="absolute inset-0 bg-white/5"
                               transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
                             />
                           )}
