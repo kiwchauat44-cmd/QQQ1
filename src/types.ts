@@ -931,7 +931,16 @@ export class Particle {
       this.quantumState.phase += 0.05 * (this.quantumState.energyLevel + 1);
       
       // Coherence decay
-      this.quantumState.coherence *= 0.999;
+      this.quantumState.coherence *= 0.9995;
+      
+      // Trigger decoherence effect if coherence falls below threshold
+      if (this.quantumState.coherence < 0.2 && !this.quantumState.isCollapsed) {
+        if (collisionEffects) {
+          collisionEffects.push(new CollisionEffect(this.x, this.y, 'decoherence', this.color, config.highDefinition));
+        }
+        this.quantumState.isCollapsed = true;
+        this.energy *= 0.8; // Energy loss during decoherence
+      }
       
       // Probability cloud fluctuation
       if (!this.quantumState.isCollapsed) {

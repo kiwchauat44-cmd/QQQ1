@@ -1177,6 +1177,50 @@ export default function App() {
     });
 
     socketRef.current?.emit('move', { x: adjX, y: adjY });
+
+    // Energy transformation on touch/interaction
+    if (!isMove && activeEnergies.length > 0) {
+      particlesRef.current.forEach(p => {
+        const dx = p.x - adjX;
+        const dy = p.y - adjY;
+        const distSq = dx * dx + dy * dy;
+        const interactionRadius = 120 * config.forceRadiusMult;
+        
+        if (distSq < interactionRadius * interactionRadius) {
+          // Transform particle type based on active energy with some probability
+          if (Math.random() < 0.15) {
+            const particleTypeMap: Record<string, ParticleType> = {
+              'electric': 'electric',
+              'nuclear': 'nuclear',
+              'atomic': 'energy',
+              'matter': 'matter',
+              'cosmic': 'cosmic',
+              'universal': 'universal',
+              'light-atom': 'light-atom',
+              'heavy-atom': 'heavy-atom',
+              'neutral': 'neutral',
+              'dark-matter': 'dark-matter',
+              'quark': 'quark'
+            };
+            
+            const newType = particleTypeMap[activeEnergies[0]];
+            if (newType && p.type !== newType) {
+              p.type = newType;
+              p.initTypeProps();
+              p.energy = Math.min(1, p.energy + 0.3);
+              
+              collisionEffectsRef.current.push(new CollisionEffect(
+                p.x, 
+                p.y, 
+                'transition', 
+                p.color, 
+                config.highDefinition
+              ));
+            }
+          }
+        }
+      });
+    }
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
